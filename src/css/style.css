@@ -260,3 +260,67 @@ body {
   0% { opacity: 1; transform: translateY(0); }
   100% { opacity: 0; transform: translateY(-50px); }
 }
+
+/* スマホ対応 */
+@media (max-width: 768px) {
+  #title-screen h1 {
+    font-size: 2rem;
+  }
+
+  .section {
+    padding: 0 1rem;
+    width: 100%;
+  }
+
+  .song-list {
+    min-width: unset;
+    width: 100%;
+  }
+
+  .song-item {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .song-actions {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .instructions {
+    margin: 1rem;
+    padding: 1rem;
+  }
+
+  .instructions p {
+    font-size: 0.9rem;
+  }
+
+  #score-display {
+    top: 10px;
+    right: 10px;
+    font-size: 1.1rem;
+  }
+
+  #result-screen h2 {
+    font-size: 2rem;
+  }
+
+  #result-stats {
+    font-size: 1.1rem;
+    padding: 0 1rem;
+  }
+
+  #result-screen button {
+    padding: 0.7rem 1.5rem;
+    font-size: 0.9rem;
+  }
+
+  .judgment {
+    font-size: 1.5rem;
+  }
+
+  #game-canvas {
+    touch-action: none;
+  }
+}

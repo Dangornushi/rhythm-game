@@ -47,6 +47,10 @@ export class GameEngine {
 
     // 入力状態
     this.keyStates = {};
+    this.touchStates = {};
+
+    // スマホ判定
+    this.isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth <= 768;
 
     // コールバック
     this.onScoreUpdate = null;
@@ -61,18 +65,25 @@ export class GameEngine {
    * Canvas設定
    */
   setupCanvas() {
-    this.canvas.width = 600;
-    this.canvas.height = window.innerHeight;
+    if (this.isMobile) {
+      this.canvas.width = window.innerWidth;
+      this.canvas.height = window.innerHeight;
+    } else {
+      this.canvas.width = 600;
+      this.canvas.height = window.innerHeight;
+    }
 
     this.laneWidth = this.canvas.width / this.laneCount;
-    this.judgeLineY = this.canvas.height - 100;
-    this.noteHeight = 30;
+    this.judgeLineY = this.canvas.height - (this.isMobile ? 150 : 100);
+    this.noteHeight = this.isMobile ? 40 : 30;
+    this.touchAreaHeight = 120;
   }
 
   /**
    * 入力設定
    */
   setupInput() {
+    // キーボード入力
     document.addEventListener('keydown', (e) => {
       if (!this.isPlaying) return;
 
@@ -85,6 +96,35 @@ export class GameEngine {
 
     document.addEventListener('keyup', (e) => {
       this.keyStates[e.key] = false;
+    });
+
+    // タッチ入力
+    this.canvas.addEventListener('touchstart', (e) => {
+      if (!this.isPlaying) return;
+      e.preventDefault();
+
+      for (const touch of e.changedTouches) {
+        const rect = this.canvas.getBoundingClientRect();
+        const x = touch.clientX - rect.left;
+        const laneIndex = Math.floor(x / this.laneWidth);
+
+        if (laneIndex >= 0 && laneIndex < this.laneCount) {
+          this.touchStates[laneIndex] = true;
+          this.judgeNote(laneIndex);
+        }
+      }
+    }, { passive: false });
+
+    this.canvas.addEventListener('touchend', (e) => {
+      for (const touch of e.changedTouches) {
+        const rect = this.canvas.getBoundingClientRect();
+        const x = touch.clientX - rect.left;
+        const laneIndex = Math.floor(x / this.laneWidth);
+
+        if (laneIndex >= 0 && laneIndex < this.laneCount) {
+          this.touchStates[laneIndex] = false;
+        }
+      }
     });
   }
 
@@ -265,22 +305,54 @@ export class GameEngine {
   }
 
   /**
-   * キー表示描画
+   * キー/タッチエリア表示描画
    */
   renderKeyIndicators() {
     const ctx = this.ctx;
-    const keyY = this.judgeLineY + 30;
 
-    this.laneKeys.forEach((key, i) => {
-      const x = i * this.laneWidth + this.laneWidth / 2;
-      const isPressed = this.keyStates[key];
+    if (this.isMobile) {
+      // スマホ: タッチエリアを描画
+      for (let i = 0; i < this.laneCount; i++) {
+        const x = i * this.laneWidth;
+        const y = this.judgeLineY + 10;
+        const isPressed = this.touchStates[i];
 
-      ctx.fillStyle = isPressed ? this.laneColors[i] : 'rgba(255, 255, 255, 0.3)';
-      ctx.font = 'bold 24px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(key.toUpperCase(), x, keyY);
-    });
+        // タッチエリア背景
+        ctx.fillStyle = isPressed
+          ? this.laneColors[i]
+          : `rgba(${this.hexToRgb(this.laneColors[i])}, 0.3)`;
+        ctx.fillRect(x + 5, y, this.laneWidth - 10, this.touchAreaHeight);
+
+        // タッチエリア枠線
+        ctx.strokeStyle = this.laneColors[i];
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x + 5, y, this.laneWidth - 10, this.touchAreaHeight);
+      }
+    } else {
+      // PC: キー表示
+      const keyY = this.judgeLineY + 30;
+
+      this.laneKeys.forEach((key, i) => {
+        const x = i * this.laneWidth + this.laneWidth / 2;
+        const isPressed = this.keyStates[key];
+
+        ctx.fillStyle = isPressed ? this.laneColors[i] : 'rgba(255, 255, 255, 0.3)';
+        ctx.font = 'bold 24px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(key.toUpperCase(), x, keyY);
+      });
+    }
+  }
+
+  /**
+   * HEXカラーをRGBに変換
+   */
+  hexToRgb(hex) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result
+      ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}`
+      : '255, 255, 255';
   }
 
   /**
