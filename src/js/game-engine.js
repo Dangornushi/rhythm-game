@@ -10,9 +10,10 @@ export class GameEngine {
     this.audioBuffer = audioBuffer;
 
     // ゲーム設定
-    this.laneCount = 4;
+    this.laneCount = 4; // 譜面のレーン数（変更しない）
     this.laneKeys = ['d', 'f', 'j', 'k'];
     this.laneColors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4'];
+    this.mobileLaneColors = ['#ff6b6b', '#45b7d1']; // スマホ用2色
 
     // タイミング設定
     this.noteSpeed = 500; // ノーツの落下速度（px/s）
@@ -51,6 +52,7 @@ export class GameEngine {
 
     // スマホ判定
     this.isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth <= 768;
+    this.displayLaneCount = this.isMobile ? 2 : 4; // 表示用レーン数
 
     // コールバック
     this.onScoreUpdate = null;
@@ -73,7 +75,7 @@ export class GameEngine {
       this.canvas.height = window.innerHeight;
     }
 
-    this.laneWidth = this.canvas.width / this.laneCount;
+    this.laneWidth = this.canvas.width / this.displayLaneCount;
     this.judgeLineY = this.canvas.height - (this.isMobile ? 150 : 100);
     this.noteHeight = this.isMobile ? 40 : 30;
     this.touchAreaHeight = 120;
@@ -106,11 +108,13 @@ export class GameEngine {
       for (const touch of e.changedTouches) {
         const rect = this.canvas.getBoundingClientRect();
         const x = touch.clientX - rect.left;
-        const laneIndex = Math.floor(x / this.laneWidth);
+        const displayLane = Math.floor(x / this.laneWidth);
 
-        if (laneIndex >= 0 && laneIndex < this.laneCount) {
-          this.touchStates[laneIndex] = true;
-          this.judgeNote(laneIndex);
+        if (displayLane >= 0 && displayLane < this.displayLaneCount) {
+          this.touchStates[displayLane] = true;
+          // 2レーン→4レーンのマッピング: 左レーン(0)→0,1を判定、右レーン(1)→2,3を判定
+          const targetLanes = displayLane === 0 ? [0, 1] : [2, 3];
+          this.judgeNoteMultiLane(targetLanes);
         }
       }
     }, { passive: false });
@@ -119,13 +123,20 @@ export class GameEngine {
       for (const touch of e.changedTouches) {
         const rect = this.canvas.getBoundingClientRect();
         const x = touch.clientX - rect.left;
-        const laneIndex = Math.floor(x / this.laneWidth);
+        const displayLane = Math.floor(x / this.laneWidth);
 
-        if (laneIndex >= 0 && laneIndex < this.laneCount) {
-          this.touchStates[laneIndex] = false;
+        if (displayLane >= 0 && displayLane < this.displayLaneCount) {
+          this.touchStates[displayLane] = false;
         }
       }
     });
+  }
+
+  /**
+   * 4レーンを2レーンにマッピング
+   */
+  laneToDisplayLane(lane) {
+    return lane < 2 ? 0 : 1;
   }
 
   /**
@@ -246,7 +257,7 @@ export class GameEngine {
   renderLanes() {
     const ctx = this.ctx;
 
-    for (let i = 0; i < this.laneCount; i++) {
+    for (let i = 0; i < this.displayLaneCount; i++) {
       const x = i * this.laneWidth;
 
       // レーン背景
@@ -287,10 +298,14 @@ export class GameEngine {
     this.activeNotes.forEach(note => {
       const timeDiff = note.time - currentTime;
       const y = this.judgeLineY - (timeDiff / this.noteAppearTime) * this.judgeLineY;
-      const x = note.lane * this.laneWidth;
 
-      // ノーツ本体
-      ctx.fillStyle = this.laneColors[note.lane];
+      // スマホの場合は2レーンにマッピング
+      const displayLane = this.isMobile ? this.laneToDisplayLane(note.lane) : note.lane;
+      const x = displayLane * this.laneWidth;
+
+      // ノーツ本体（スマホは2色、PCは4色）
+      const colors = this.isMobile ? this.mobileLaneColors : this.laneColors;
+      ctx.fillStyle = colors[displayLane];
       ctx.beginPath();
       ctx.roundRect(x + 10, y - this.noteHeight / 2, this.laneWidth - 20, this.noteHeight, 5);
       ctx.fill();
@@ -311,20 +326,20 @@ export class GameEngine {
     const ctx = this.ctx;
 
     if (this.isMobile) {
-      // スマホ: タッチエリアを描画
-      for (let i = 0; i < this.laneCount; i++) {
+      // スマホ: 2レーン分のタッチエリアを描画
+      for (let i = 0; i < this.displayLaneCount; i++) {
         const x = i * this.laneWidth;
         const y = this.judgeLineY + 10;
         const isPressed = this.touchStates[i];
 
         // タッチエリア背景
         ctx.fillStyle = isPressed
-          ? this.laneColors[i]
-          : `rgba(${this.hexToRgb(this.laneColors[i])}, 0.3)`;
+          ? this.mobileLaneColors[i]
+          : `rgba(${this.hexToRgb(this.mobileLaneColors[i])}, 0.3)`;
         ctx.fillRect(x + 5, y, this.laneWidth - 10, this.touchAreaHeight);
 
         // タッチエリア枠線
-        ctx.strokeStyle = this.laneColors[i];
+        ctx.strokeStyle = this.mobileLaneColors[i];
         ctx.lineWidth = 2;
         ctx.strokeRect(x + 5, y, this.laneWidth - 10, this.touchAreaHeight);
       }
@@ -400,6 +415,57 @@ export class GameEngine {
       this.score += Math.floor(this.combo * 10);
 
       this.showJudgment(judgment, laneIndex);
+      this.updateUI();
+    }
+  }
+
+  /**
+   * 複数レーンを対象にノーツ判定（スマホ用）
+   */
+  judgeNoteMultiLane(laneIndices) {
+    const currentTime = this.getCurrentTime();
+
+    // 対象レーンの中で最も近いノーツを探す
+    let closestNote = null;
+    let closestDiff = Infinity;
+
+    this.activeNotes.forEach(note => {
+      if (!laneIndices.includes(note.lane) || note.hit) return;
+
+      const diff = Math.abs(note.time - currentTime);
+      if (diff < closestDiff) {
+        closestDiff = diff;
+        closestNote = note;
+      }
+    });
+
+    if (!closestNote) return;
+
+    // 判定
+    let judgment = null;
+    if (closestDiff <= this.judgeWindows.perfect) {
+      judgment = 'perfect';
+      this.score += 1000;
+    } else if (closestDiff <= this.judgeWindows.great) {
+      judgment = 'great';
+      this.score += 500;
+    } else if (closestDiff <= this.judgeWindows.good) {
+      judgment = 'good';
+      this.score += 100;
+    }
+
+    if (judgment) {
+      closestNote.hit = true;
+      this.combo++;
+      this.maxCombo = Math.max(this.maxCombo, this.combo);
+      this.judgeCount[judgment]++;
+
+      // コンボボーナス
+      this.score += Math.floor(this.combo * 10);
+
+      // 表示用レーンで判定エフェクトを表示
+      const displayLane = this.laneToDisplayLane(closestNote.lane);
+      this.showJudgment(judgment, displayLane);
       this.updateUI();
     }
   }
