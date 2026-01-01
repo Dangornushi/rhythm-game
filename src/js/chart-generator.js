@@ -138,4 +138,25 @@ export class ChartGenerator {
     const keepRatio = 0.3 + (level * 0.7); // 30%〜100%を保持
     return notes.filter(() => Math.random() < keepRatio);
   }
+
+  /**
+   * スマホ用の簡単譜面を生成（連打を防ぐ）
+   */
+  adjustForMobile(notes) {
+    const minInterval = 0.6; // 最低0.6秒間隔
+    const result = [];
+    let lastTime = -Infinity;
+
+    // 時間順にソート
+    const sorted = [...notes].sort((a, b) => a.time - b.time);
+
+    sorted.forEach(note => {
+      if (note.time - lastTime >= minInterval) {
+        result.push(note);
+        lastTime = note.time;
+      }
+    });
+
+    return result;
+  }
 }

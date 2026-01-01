@@ -237,10 +237,10 @@ class App {
       this.audioAnalyzer.getBuffer()
     );
 
-    // スマホの場合は難易度を簡単に固定
+    // スマホの場合は連打を防いだ簡単譜面に
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth <= 768;
     const chartToUse = isMobile
-      ? this.chartGenerator.adjustDifficulty([...this.chart], 0.0)
+      ? this.chartGenerator.adjustForMobile(this.chart)
       : this.chart;
 
     this.gameEngine.setChart(chartToUse);
