@@ -18,7 +18,7 @@ export class GameEngine {
     // タイミング設定
     this.noteSpeed = 500; // ノーツの落下速度（px/s）
     this.judgeLineY = 0; // 判定ライン（後で設定）
-    this.noteAppearTime = 2.0; // ノーツが画面に表示される秒数
+    this.noteAppearTime = 1.0; // ノーツが画面に表示される秒数
 
     // 判定ウィンドウ（秒）
     this.judgeWindows = {
