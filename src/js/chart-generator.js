@@ -140,10 +140,10 @@ export class ChartGenerator {
   }
 
   /**
-   * スマホ用の簡単譜面を生成（連打を防ぐ）
+   * スマホ用の簡単譜面を生成（連打を防ぐ、1レーン固定）
    */
   adjustForMobile(notes) {
-    const minInterval = 0.8; // 最低0.8秒間隔
+    const minInterval = 0.6; // 最低0.6秒間隔
     const result = [];
     let lastTime = -Infinity;
 
@@ -152,7 +152,8 @@ export class ChartGenerator {
 
     sorted.forEach(note => {
       if (note.time - lastTime >= minInterval) {
-        result.push(note);
+        // 全て1レーン（中央）に固定
+        result.push({ time: note.time, lane: 0 });
         lastTime = note.time;
       }
     });

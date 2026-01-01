@@ -13,7 +13,7 @@ export class GameEngine {
     this.laneCount = 4; // 譜面のレーン数（変更しない）
     this.laneKeys = ['d', 'f', 'j', 'k'];
     this.laneColors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4'];
-    this.mobileLaneColors = ['#ff6b6b', '#45b7d1']; // スマホ用2色
+    this.mobileLaneColors = ['#4ecdc4']; // スマホ用1色
 
     // タイミング設定
     this.noteSpeed = 500; // ノーツの落下速度（px/s）
@@ -52,7 +52,7 @@ export class GameEngine {
 
     // スマホ判定
     this.isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth <= 768;
-    this.displayLaneCount = this.isMobile ? 2 : 4; // 表示用レーン数
+    this.displayLaneCount = this.isMobile ? 1 : 4; // 表示用レーン数
 
     // コールバック
     this.onScoreUpdate = null;
@@ -112,9 +112,8 @@ export class GameEngine {
 
         if (displayLane >= 0 && displayLane < this.displayLaneCount) {
           this.touchStates[displayLane] = true;
-          // 2レーン→4レーンのマッピング: 左レーン(0)→0,1を判定、右レーン(1)→2,3を判定
-          const targetLanes = displayLane === 0 ? [0, 1] : [2, 3];
-          this.judgeNoteMultiLane(targetLanes);
+          // 1レーンモード: どこをタップしてもレーン0を判定
+          this.judgeNote(0);
         }
       }
     }, { passive: false });
@@ -133,10 +132,12 @@ export class GameEngine {
   }
 
   /**
-   * 4レーンを2レーンにマッピング
+   * 4レーンを表示用レーンにマッピング
    */
   laneToDisplayLane(lane) {
-    return lane < 2 ? 0 : 1;
+    if (this.displayLaneCount === 1) return 0;
+    if (this.displayLaneCount === 2) return lane < 2 ? 0 : 1;
+    return lane;
   }
 
   /**
