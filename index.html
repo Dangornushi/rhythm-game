@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rhythm Game</title>
+  <link rel="stylesheet" href="src/css/style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- タイトル画面 -->
+    <div id="title-screen" class="screen active">
+      <h1>Rhythm Game</h1>
+
+      <!-- 新規曲追加 -->
+      <div class="section">
+        <h3>新しい曲を追加</h3>
+        <input type="file" id="audio-input" accept="audio/*">
+        <button id="start-btn" disabled>解析してプレイ</button>
+      </div>
+
+      <!-- 保存済み曲リスト -->
+      <div class="section">
+        <h3>保存済みの曲</h3>
+        <div id="song-list" class="song-list">
+          <p class="empty-message">保存された曲はありません</p>
+        </div>
+      </div>
+
+      <div class="instructions">
+        <h3>操作方法</h3>
+        <p>D / F / J / K キーでノーツを叩く</p>
+      </div>
+    </div>
+
+    <!-- ゲーム画面 -->
+    <div id="game-screen" class="screen">
+      <canvas id="game-canvas"></canvas>
+      <div id="score-display">
+        <span>Score: <span id="score">0</span></span>
+        <span>Combo: <span id="combo">0</span></span>
+      </div>
+    </div>
+
+    <!-- リザルト画面 -->
+    <div id="result-screen" class="screen">
+      <h2>Result</h2>
+      <div id="result-stats"></div>
+      <button id="retry-btn">もう一度プレイ</button>
+      <button id="back-btn">タイトルに戻る</button>
+    </div>
+  </div>
+
+  <script type="module" src="src/js/main.js"></script>
+</body>
+</html>
