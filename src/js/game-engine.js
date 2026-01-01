@@ -68,17 +68,24 @@ export class GameEngine {
    */
   setupCanvas() {
     if (this.isMobile) {
+      // 横画面対応：画面全体を使用
       this.canvas.width = window.innerWidth;
       this.canvas.height = window.innerHeight;
+
+      // 横画面かどうかで調整
+      const isLandscape = window.innerWidth > window.innerHeight;
+      this.judgeLineY = this.canvas.height - (isLandscape ? 80 : 150);
+      this.noteHeight = isLandscape ? 25 : 40;
+      this.touchAreaHeight = isLandscape ? 70 : 120;
     } else {
       this.canvas.width = 600;
       this.canvas.height = window.innerHeight;
+      this.judgeLineY = this.canvas.height - 100;
+      this.noteHeight = 30;
+      this.touchAreaHeight = 120;
     }
 
     this.laneWidth = this.canvas.width / this.displayLaneCount;
-    this.judgeLineY = this.canvas.height - (this.isMobile ? 150 : 100);
-    this.noteHeight = this.isMobile ? 40 : 30;
-    this.touchAreaHeight = 120;
   }
 
   /**
