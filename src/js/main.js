@@ -237,7 +237,13 @@ class App {
       this.audioAnalyzer.getBuffer()
     );
 
-    this.gameEngine.setChart(this.chart);
+    // スマホの場合は難易度を簡単に固定
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth <= 768;
+    const chartToUse = isMobile
+      ? this.chartGenerator.adjustDifficulty([...this.chart], 0.0)
+      : this.chart;
+
+    this.gameEngine.setChart(chartToUse);
 
     // コールバック設定
     this.gameEngine.onScoreUpdate = (score) => {
