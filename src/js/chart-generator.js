@@ -143,7 +143,7 @@ export class ChartGenerator {
    * スマホ用の簡単譜面を生成（連打を防ぐ）
    */
   adjustForMobile(notes) {
-    const minInterval = 1.0; // 最低1秒間隔
+    const minInterval = 0.8; // 最低0.8秒間隔
     const result = [];
     let lastTime = -Infinity;
 
