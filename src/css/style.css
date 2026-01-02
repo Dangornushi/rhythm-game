@@ -193,6 +193,7 @@ body {
 /* ゲーム画面 */
 #game-screen {
   background: #000;
+  position: relative;
 }
 
 #game-canvas {
