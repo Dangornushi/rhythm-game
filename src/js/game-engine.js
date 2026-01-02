@@ -59,8 +59,34 @@ export class GameEngine {
     this.onComboUpdate = null;
     this.onGameEnd = null;
 
+    // 3D表示設定
+    this.perspective = {
+      vanishY: 0,           // 消失点のY座標（上端）
+      horizonRatio: 0.15,   // 消失点でのレーン幅の比率
+      noteMinScale: 0.3,    // 最も奥のノーツのスケール
+    };
+
     this.setupCanvas();
     this.setupInput();
+
+    // スマホの場合は横画面を強制
+    if (this.isMobile) {
+      this.lockLandscape();
+    }
+  }
+
+  /**
+   * 横画面をロック（スマホ用）
+   */
+  async lockLandscape() {
+    try {
+      if (screen.orientation && screen.orientation.lock) {
+        await screen.orientation.lock('landscape');
+      }
+    } catch (e) {
+      // ロックに失敗した場合は警告を表示
+      console.log('Screen orientation lock not supported');
+    }
   }
 
   /**
@@ -71,12 +97,9 @@ export class GameEngine {
       // 横画面対応：画面全体を使用
       this.canvas.width = window.innerWidth;
       this.canvas.height = window.innerHeight;
-
-      // 横画面かどうかで調整
-      const isLandscape = window.innerWidth > window.innerHeight;
-      this.judgeLineY = this.canvas.height - (isLandscape ? 80 : 150);
-      this.noteHeight = isLandscape ? 25 : 40;
-      this.touchAreaHeight = isLandscape ? 70 : 120;
+      this.judgeLineY = this.canvas.height - 80;
+      this.noteHeight = 25;
+      this.touchAreaHeight = 70;
     } else {
       this.canvas.width = 600;
       this.canvas.height = window.innerHeight;
@@ -86,6 +109,9 @@ export class GameEngine {
     }
 
     this.laneWidth = this.canvas.width / this.displayLaneCount;
+
+    // 3D用の消失点設定
+    this.perspective.vanishY = 50;
   }
 
   /**
@@ -115,7 +141,7 @@ export class GameEngine {
       for (const touch of e.changedTouches) {
         const rect = this.canvas.getBoundingClientRect();
         const x = touch.clientX - rect.left;
-        const displayLane = Math.floor(x / this.laneWidth);
+        const displayLane = this.getLaneFromX(x);
 
         if (displayLane >= 0 && displayLane < this.displayLaneCount) {
           this.touchStates[displayLane] = true;
@@ -128,22 +154,13 @@ export class GameEngine {
       for (const touch of e.changedTouches) {
         const rect = this.canvas.getBoundingClientRect();
         const x = touch.clientX - rect.left;
-        const displayLane = Math.floor(x / this.laneWidth);
+        const displayLane = this.getLaneFromX(x);
 
         if (displayLane >= 0 && displayLane < this.displayLaneCount) {
           this.touchStates[displayLane] = false;
         }
       }
     });
-  }
-
-  /**
-   * 4レーンを表示用レーンにマッピング
-   */
-  laneToDisplayLane(lane) {
-    if (this.displayLaneCount === 1) return 0;
-    if (this.displayLaneCount === 2) return lane < 2 ? 0 : 1;
-    return lane;
   }
 
   /**
@@ -259,103 +276,210 @@ export class GameEngine {
   }
 
   /**
-   * レーン描画
+   * X座標からレーン番号を取得（判定ライン位置で計算）
+   */
+  getLaneFromX(x) {
+    for (let i = 0; i < this.displayLaneCount; i++) {
+      const laneInfo = this.getLaneXAtY(i, this.judgeLineY);
+      const nextLaneInfo = this.getLaneXAtY(i + 1, this.judgeLineY);
+      if (x >= laneInfo.x && x < nextLaneInfo.x) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  /**
+   * Y座標から3Dスケールを計算
+   */
+  getScaleAtY(y) {
+    const { vanishY, noteMinScale } = this.perspective;
+    const totalDistance = this.judgeLineY - vanishY;
+    const currentDistance = y - vanishY;
+    const progress = Math.max(0, Math.min(1, currentDistance / totalDistance));
+    return noteMinScale + (1 - noteMinScale) * progress;
+  }
+
+  /**
+   * Y座標でのレーンのX座標範囲を計算
+   */
+  getLaneXAtY(laneIndex, y) {
+    const scale = this.getScaleAtY(y);
+    const centerX = this.canvas.width / 2;
+    const totalWidth = this.canvas.width * scale;
+    const laneWidth = totalWidth / this.displayLaneCount;
+    const startX = centerX - totalWidth / 2;
+    return {
+      x: startX + laneIndex * laneWidth,
+      width: laneWidth
+    };
+  }
+
+  /**
+   * レーン描画（3D風）
    */
   renderLanes() {
     const ctx = this.ctx;
+    const { vanishY } = this.perspective;
 
+    // 各レーンを台形として描画
     for (let i = 0; i < this.displayLaneCount; i++) {
-      const x = i * this.laneWidth;
+      // 上端（消失点付近）の座標
+      const topLane = this.getLaneXAtY(i, vanishY);
+      const topNextLane = this.getLaneXAtY(i + 1, vanishY);
 
-      // レーン背景
+      // 下端（判定ライン）の座標
+      const bottomLane = this.getLaneXAtY(i, this.judgeLineY);
+      const bottomNextLane = this.getLaneXAtY(i + 1, this.judgeLineY);
+
+      // レーン背景（台形）
       ctx.fillStyle = `rgba(255, 255, 255, 0.03)`;
-      ctx.fillRect(x, 0, this.laneWidth, this.canvas.height);
+      ctx.beginPath();
+      ctx.moveTo(topLane.x, vanishY);
+      ctx.lineTo(topNextLane.x, vanishY);
+      ctx.lineTo(bottomNextLane.x, this.judgeLineY);
+      ctx.lineTo(bottomLane.x, this.judgeLineY);
+      ctx.closePath();
+      ctx.fill();
 
       // レーン区切り線
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+      ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, this.canvas.height);
+      ctx.moveTo(topLane.x, vanishY);
+      ctx.lineTo(bottomLane.x, this.judgeLineY);
+      ctx.stroke();
+    }
+
+    // 右端の線
+    const topRight = this.getLaneXAtY(this.displayLaneCount, vanishY);
+    const bottomRight = this.getLaneXAtY(this.displayLaneCount, this.judgeLineY);
+    ctx.beginPath();
+    ctx.moveTo(topRight.x, vanishY);
+    ctx.lineTo(bottomRight.x, this.judgeLineY);
+    ctx.stroke();
+
+    // 奥行きグリッド線（横線）
+    const gridLines = 8;
+    for (let i = 1; i < gridLines; i++) {
+      const progress = i / gridLines;
+      const y = vanishY + (this.judgeLineY - vanishY) * progress;
+      const leftLane = this.getLaneXAtY(0, y);
+      const rightLane = this.getLaneXAtY(this.displayLaneCount, y);
+
+      ctx.strokeStyle = `rgba(255, 255, 255, ${0.05 + progress * 0.05})`;
+      ctx.beginPath();
+      ctx.moveTo(leftLane.x, y);
+      ctx.lineTo(rightLane.x, y);
       ctx.stroke();
     }
   }
 
   /**
-   * 判定ライン描画
+   * 判定ライン描画（3D対応）
    */
   renderJudgeLine() {
     const ctx = this.ctx;
+    const leftLane = this.getLaneXAtY(0, this.judgeLineY);
+    const rightLane = this.getLaneXAtY(this.displayLaneCount, this.judgeLineY);
 
     // グラデーション効果
     const gradient = ctx.createLinearGradient(0, this.judgeLineY - 5, 0, this.judgeLineY + 5);
     gradient.addColorStop(0, 'rgba(255, 255, 255, 0)');
-    gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.8)');
+    gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.9)');
     gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
 
     ctx.fillStyle = gradient;
-    ctx.fillRect(0, this.judgeLineY - 5, this.canvas.width, 10);
+    ctx.fillRect(leftLane.x, this.judgeLineY - 5, rightLane.x - leftLane.x, 10);
   }
 
   /**
-   * ノーツ描画
+   * ノーツ描画（3D風）
    */
   renderNotes(currentTime) {
     const ctx = this.ctx;
+    const { vanishY } = this.perspective;
 
-    this.activeNotes.forEach(note => {
+    // 奥から手前の順に描画するためソート
+    const sortedNotes = [...this.activeNotes].sort((a, b) => {
+      const yA = this.judgeLineY - ((a.time - currentTime) / this.noteAppearTime) * (this.judgeLineY - vanishY);
+      const yB = this.judgeLineY - ((b.time - currentTime) / this.noteAppearTime) * (this.judgeLineY - vanishY);
+      return yA - yB;
+    });
+
+    sortedNotes.forEach(note => {
       const timeDiff = note.time - currentTime;
-      const y = this.judgeLineY - (timeDiff / this.noteAppearTime) * this.judgeLineY;
+      // Y座標を消失点から判定ラインまでの範囲で計算
+      const progress = 1 - (timeDiff / this.noteAppearTime);
+      const y = vanishY + (this.judgeLineY - vanishY) * progress;
 
-      // スマホの場合は2レーンにマッピング
-      const displayLane = this.isMobile ? this.laneToDisplayLane(note.lane) : note.lane;
-      const x = displayLane * this.laneWidth;
+      // 画面外のノーツは描画しない
+      if (y < vanishY || y > this.judgeLineY) return;
 
-      // ノーツ本体（スマホは2色、PCは4色）
+      // 3Dスケールを取得
+      const scale = this.getScaleAtY(y);
+      const laneInfo = this.getLaneXAtY(note.lane, y);
+
+      // スケールに応じたノーツサイズ
+      const noteHeight = this.noteHeight * scale;
+      const noteWidth = laneInfo.width - 20 * scale;
+      const x = laneInfo.x + 10 * scale;
+
+      // ノーツ本体
       const colors = this.isMobile ? this.mobileLaneColors : this.laneColors;
-      ctx.fillStyle = colors[displayLane];
+      ctx.fillStyle = colors[note.lane];
       ctx.beginPath();
-      ctx.roundRect(x + 10, y - this.noteHeight / 2, this.laneWidth - 20, this.noteHeight, 5);
+      ctx.roundRect(x, y - noteHeight / 2, noteWidth, noteHeight, 5 * scale);
       ctx.fill();
 
       // 光沢効果
-      const glossGradient = ctx.createLinearGradient(x, y - this.noteHeight / 2, x, y + this.noteHeight / 2);
-      glossGradient.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
+      const glossGradient = ctx.createLinearGradient(x, y - noteHeight / 2, x, y + noteHeight / 2);
+      glossGradient.addColorStop(0, `rgba(255, 255, 255, ${0.4 * scale})`);
       glossGradient.addColorStop(0.5, 'rgba(255, 255, 255, 0)');
       ctx.fillStyle = glossGradient;
       ctx.fill();
+
+      // 枠線（奥行き感を強調）
+      ctx.strokeStyle = `rgba(255, 255, 255, ${0.3 * scale})`;
+      ctx.lineWidth = 1;
+      ctx.stroke();
     });
   }
 
   /**
-   * キー/タッチエリア表示描画
+   * キー/タッチエリア表示描画（3D対応）
    */
   renderKeyIndicators() {
     const ctx = this.ctx;
 
     if (this.isMobile) {
-      // スマホ: 2レーン分のタッチエリアを描画
+      // スマホ: タッチエリアを描画
       for (let i = 0; i < this.displayLaneCount; i++) {
-        const x = i * this.laneWidth;
+        const laneInfo = this.getLaneXAtY(i, this.judgeLineY);
+        const nextLaneInfo = this.getLaneXAtY(i + 1, this.judgeLineY);
         const y = this.judgeLineY + 10;
         const isPressed = this.touchStates[i];
+        const width = nextLaneInfo.x - laneInfo.x - 10;
 
         // タッチエリア背景
         ctx.fillStyle = isPressed
           ? this.mobileLaneColors[i]
           : `rgba(${this.hexToRgb(this.mobileLaneColors[i])}, 0.3)`;
-        ctx.fillRect(x + 5, y, this.laneWidth - 10, this.touchAreaHeight);
+        ctx.fillRect(laneInfo.x + 5, y, width, this.touchAreaHeight);
 
         // タッチエリア枠線
         ctx.strokeStyle = this.mobileLaneColors[i];
         ctx.lineWidth = 2;
-        ctx.strokeRect(x + 5, y, this.laneWidth - 10, this.touchAreaHeight);
+        ctx.strokeRect(laneInfo.x + 5, y, width, this.touchAreaHeight);
       }
     } else {
       // PC: キー表示
       const keyY = this.judgeLineY + 30;
 
       this.laneKeys.forEach((key, i) => {
-        const x = i * this.laneWidth + this.laneWidth / 2;
+        const laneInfo = this.getLaneXAtY(i, this.judgeLineY);
+        const nextLaneInfo = this.getLaneXAtY(i + 1, this.judgeLineY);
+        const x = (laneInfo.x + nextLaneInfo.x) / 2;
         const isPressed = this.keyStates[key];
 
         ctx.fillStyle = isPressed ? this.laneColors[i] : 'rgba(255, 255, 255, 0.3)';
@@ -470,9 +594,7 @@ export class GameEngine {
       // コンボボーナス
       this.score += Math.floor(this.combo * 10);
 
-      // 表示用レーンで判定エフェクトを表示
-      const displayLane = this.laneToDisplayLane(closestNote.lane);
-      this.showJudgment(judgment, displayLane);
+      this.showJudgment(judgment, closestNote.lane);
       this.updateUI();
     }
   }
@@ -490,10 +612,14 @@ export class GameEngine {
    * 判定エフェクト表示
    */
   showJudgment(judgment, laneIndex) {
+    const laneInfo = this.getLaneXAtY(laneIndex, this.judgeLineY);
+    const nextLaneInfo = this.getLaneXAtY(laneIndex + 1, this.judgeLineY);
+    const centerX = (laneInfo.x + nextLaneInfo.x) / 2;
+
     const element = document.createElement('div');
     element.className = `judgment ${judgment}`;
     element.textContent = judgment.toUpperCase();
-    element.style.left = `${this.canvas.offsetLeft + laneIndex * this.laneWidth + this.laneWidth / 2}px`;
+    element.style.left = `${this.canvas.offsetLeft + centerX}px`;
     element.style.top = `${this.judgeLineY - 50}px`;
     document.body.appendChild(element);
 
