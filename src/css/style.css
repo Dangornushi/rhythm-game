@@ -397,42 +397,47 @@ body {
     font-size: 0.9rem;
   }
 
-  /* リザルト画面：コンパクトレイアウト */
+  /* リザルト画面：コンパクト横並びレイアウト */
   #result-screen {
     flex-direction: row;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     justify-content: center;
-    align-items: flex-start;
-    gap: 0.5rem;
-    padding: 0.3rem;
-    overflow-y: auto;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.5rem 1rem;
   }
 
   #result-screen h2 {
-    width: 100%;
-    font-size: 1rem;
+    font-size: 1.2rem;
     margin-bottom: 0;
-    text-align: center;
+    writing-mode: vertical-rl;
   }
 
   #result-stats {
-    font-size: 0.75rem;
-    line-height: 1.3;
+    display: flex;
+    gap: 1rem;
+    font-size: 0.7rem;
+    line-height: 1.4;
     margin-bottom: 0;
-    text-align: left;
   }
 
-  #result-stats p {
-    margin: 0.1rem 0;
+  .result-main, .result-judges {
+    display: flex;
+    flex-direction: column;
   }
 
-  #result-stats hr {
-    margin: 0.3rem 0 !important;
+  .result-judges {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .result-judges span {
+    white-space: nowrap;
   }
 
   #result-screen button {
-    padding: 0.4rem 1rem;
-    font-size: 0.75rem;
+    padding: 0.5rem 0.8rem;
+    font-size: 0.7rem;
     margin: 0.2rem;
   }
 

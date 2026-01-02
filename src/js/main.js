@@ -276,14 +276,17 @@ class App {
     const accuracy = ((result.perfect + result.great * 0.8 + result.good * 0.5) / result.totalNotes * 100).toFixed(1);
 
     this.resultStats.innerHTML = `
-      <p>Score: ${result.score.toLocaleString()}</p>
-      <p>Max Combo: ${result.maxCombo}</p>
-      <p>Accuracy: ${accuracy}%</p>
-      <hr style="margin: 1rem 0; border-color: rgba(255,255,255,0.2);">
-      <p style="color: #ffff00;">Perfect: ${result.perfect}</p>
-      <p style="color: #00ff00;">Great: ${result.great}</p>
-      <p style="color: #00aaff;">Good: ${result.good}</p>
-      <p style="color: #ff0000;">Miss: ${result.miss}</p>
+      <div class="result-main">
+        <p>Score: ${result.score.toLocaleString()}</p>
+        <p>Max Combo: ${result.maxCombo}</p>
+        <p>Accuracy: ${accuracy}%</p>
+      </div>
+      <div class="result-judges">
+        <span style="color: #ffff00;">Perfect: ${result.perfect}</span>
+        <span style="color: #00ff00;">Great: ${result.great}</span>
+        <span style="color: #00aaff;">Good: ${result.good}</span>
+        <span style="color: #ff0000;">Miss: ${result.miss}</span>
+      </div>
     `;
   }
 
