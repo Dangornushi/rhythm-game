@@ -35,6 +35,7 @@ class App {
     this.startBtn = document.getElementById('start-btn');
     this.retryBtn = document.getElementById('retry-btn');
     this.backBtn = document.getElementById('back-btn');
+    this.gameBackBtn = document.getElementById('game-back-btn');
     this.songList = document.getElementById('song-list');
     this.canvas = document.getElementById('game-canvas');
     this.scoreDisplay = document.getElementById('score');
@@ -46,6 +47,14 @@ class App {
     this.startBtn.addEventListener('click', () => this.startNewSong());
     this.retryBtn.addEventListener('click', () => this.retryGame());
     this.backBtn.addEventListener('click', () => this.backToTitle());
+    this.gameBackBtn.addEventListener('click', () => this.backToTitle());
+
+    // Escキーでメニューに戻る
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && this.screens.game.classList.contains('active')) {
+        this.backToTitle();
+      }
+    });
 
     // 保存済み曲リストを読み込み
     await this.loadSongList();
