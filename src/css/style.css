@@ -334,29 +334,109 @@ body {
 
 /* スマホ横画面対応 */
 @media (max-width: 900px) and (orientation: landscape) {
+  /* タイトル画面：横並びレイアウト */
+  #title-screen {
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: flex-start;
+    padding: 0.5rem 1rem;
+    overflow-y: auto;
+  }
+
   #title-screen h1 {
-    font-size: 1.5rem;
-    margin-bottom: 0.5rem;
+    position: absolute;
+    top: 0.3rem;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 1.2rem;
+    margin-bottom: 0;
   }
 
   .section {
-    margin-bottom: 0.5rem;
+    margin-top: 2rem;
+    margin-bottom: 0;
+    flex: 1;
+    max-width: 45%;
   }
 
   .section h3 {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     margin-bottom: 0.3rem;
   }
 
   .song-list {
-    max-height: 120px;
+    max-height: 80px;
+    min-width: unset;
+  }
+
+  .song-item {
+    padding: 0.4rem 0.6rem;
+    margin: 0.2rem 0;
+  }
+
+  .song-name {
+    font-size: 0.85rem;
+  }
+
+  .song-meta {
+    font-size: 0.7rem;
+  }
+
+  .song-actions button {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.75rem;
+  }
+
+  #audio-input {
+    font-size: 0.8rem;
+    margin-bottom: 0.5rem;
   }
 
   #start-btn {
-    padding: 0.5rem 1.5rem;
-    font-size: 1rem;
+    padding: 0.4rem 1rem;
+    font-size: 0.9rem;
   }
 
+  /* リザルト画面：コンパクトレイアウト */
+  #result-screen {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.3rem;
+    overflow-y: auto;
+  }
+
+  #result-screen h2 {
+    width: 100%;
+    font-size: 1rem;
+    margin-bottom: 0;
+    text-align: center;
+  }
+
+  #result-stats {
+    font-size: 0.75rem;
+    line-height: 1.3;
+    margin-bottom: 0;
+    text-align: left;
+  }
+
+  #result-stats p {
+    margin: 0.1rem 0;
+  }
+
+  #result-stats hr {
+    margin: 0.3rem 0 !important;
+  }
+
+  #result-screen button {
+    padding: 0.4rem 1rem;
+    font-size: 0.75rem;
+    margin: 0.2rem;
+  }
+
+  /* ゲーム画面 */
   #score-display {
     top: 5px;
     right: 10px;

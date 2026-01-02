@@ -18,7 +18,7 @@ export class GameEngine {
     // タイミング設定
     this.noteSpeed = 500; // ノーツの落下速度（px/s）
     this.judgeLineY = 0; // 判定ライン（後で設定）
-    this.noteAppearTime = 1.0; // ノーツが画面に表示される秒数
+    this.noteAppearTime = 2.0; // ノーツが画面に表示される秒数
 
     // 判定ウィンドウ（秒）
     this.judgeWindows = {
@@ -394,6 +394,20 @@ export class GameEngine {
   }
 
   /**
+   * 時間progressから3D遠近法を適用したY座標を計算
+   */
+  getPerspectiveY(linearProgress) {
+    const { vanishY } = this.perspective;
+    // 3D空間でのZ座標をシミュレート
+    // zFar: 大きいほど奥から出現、zNear: 大きいほど加速が緩やか
+    const zFar = 150;
+    const zNear = 20;
+    const z = zFar - linearProgress * (zFar - zNear);
+    // 遠近法投影：手前ほど加速して見える
+    return vanishY + (this.judgeLineY - vanishY) * (zNear / z);
+  }
+
+  /**
    * ノーツ描画（3D風）
    */
   renderNotes(currentTime) {
@@ -402,16 +416,17 @@ export class GameEngine {
 
     // 奥から手前の順に描画するためソート
     const sortedNotes = [...this.activeNotes].sort((a, b) => {
-      const yA = this.judgeLineY - ((a.time - currentTime) / this.noteAppearTime) * (this.judgeLineY - vanishY);
-      const yB = this.judgeLineY - ((b.time - currentTime) / this.noteAppearTime) * (this.judgeLineY - vanishY);
-      return yA - yB;
+      const progressA = 1 - ((a.time - currentTime) / this.noteAppearTime);
+      const progressB = 1 - ((b.time - currentTime) / this.noteAppearTime);
+      return this.getPerspectiveY(progressA) - this.getPerspectiveY(progressB);
     });
 
     sortedNotes.forEach(note => {
       const timeDiff = note.time - currentTime;
-      // Y座標を消失点から判定ラインまでの範囲で計算
-      const progress = 1 - (timeDiff / this.noteAppearTime);
-      const y = vanishY + (this.judgeLineY - vanishY) * progress;
+      // 線形の進行度を計算
+      const linearProgress = 1 - (timeDiff / this.noteAppearTime);
+      // 3D遠近法を適用したY座標
+      const y = this.getPerspectiveY(linearProgress);
 
       // 画面外のノーツは描画しない
       if (y < vanishY || y > this.judgeLineY) return;
