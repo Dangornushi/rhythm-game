@@ -179,17 +179,6 @@ body {
   background: rgba(255, 100, 100, 0.5);
 }
 
-.instructions {
-  margin-top: 1rem;
-  padding: 1.5rem;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-}
-
-.instructions h3 {
-  margin-bottom: 0.5rem;
-}
-
 /* ゲーム画面 */
 #game-screen {
   background: #000;
@@ -307,15 +296,6 @@ body {
     justify-content: center;
   }
 
-  .instructions {
-    margin: 1rem;
-    padding: 1rem;
-  }
-
-  .instructions p {
-    font-size: 0.9rem;
-  }
-
   #score-display {
     top: 10px;
     right: 10px;
@@ -370,15 +350,6 @@ body {
 
   .song-list {
     max-height: 120px;
-  }
-
-  .instructions {
-    padding: 0.5rem;
-    margin: 0.5rem;
-  }
-
-  .instructions p {
-    font-size: 0.8rem;
   }
 
   #start-btn {

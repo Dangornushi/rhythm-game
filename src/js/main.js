@@ -246,13 +246,7 @@ class App {
       this.audioAnalyzer.getBuffer()
     );
 
-    // スマホの場合は連打を防いだ簡単譜面に
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth <= 768;
-    const chartToUse = isMobile
-      ? this.chartGenerator.adjustForMobile(this.chart)
-      : this.chart;
-
-    this.gameEngine.setChart(chartToUse);
+    this.gameEngine.setChart(this.chart);
 
     // コールバック設定
     this.gameEngine.onScoreUpdate = (score) => {
